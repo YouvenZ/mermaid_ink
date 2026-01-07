@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<inkscape-extension xmlns="http://www.inkscape.org/namespace/inkscape/extension">
+    <name>Mermaid Diagram Generator</name>
+    <id>org.inkscape.mermaid.generator</id>
+    
+    <param name="tab" type="notebook">
+        <page name="diagram" gui-text="Diagram">
+            <param name="use_file" type="bool" gui-text="Load code from file">false</param>
+            <spacer/>
+            
+            <param name="mermaid_code" type="string" appearance="multiline" gui-text="Mermaid code:" max_length="10000">graph TD
+    A[Start] --> B{Decision}
+    B -->|Yes| C[OK]
+    B -->|No| D[End]
+    C --> D</param>
+            <label>Enter your Mermaid diagram code above (supports multi-line)</label>
+            <spacer/>
+            
+            <param name="mermaid_file" type="string" gui-text="Mermaid file path:">C:\path\to\diagram.mmd</param>
+            <label>Only used when 'Load code from file' is checked</label>
+        </page>
+        
+        <page name="style" gui-text="Style">
+            <param name="theme" type="optiongroup" appearance="combo" gui-text="Theme:">
+                <option value="default">Default</option>
+                <option value="forest">Forest</option>
+                <option value="dark">Dark</option>
+                <option value="neutral">Neutral</option>
+                <option value="base">Base</option>
+            </param>
+            <spacer/>
+            
+            <param name="background" type="optiongroup" appearance="combo" gui-text="Background:">
+                <option value="white">White</option>
+                <option value="transparent">Transparent</option>
+                <option value="black">Black</option>
+            </param>
+            <spacer/>
+            
+            <param name="fit_to_content" type="bool" gui-text="Fit to content (remove empty space)">true</param>
+            <label>If disabled, you can set custom dimensions below:</label>
+            <param name="width" type="int" min="100" max="5000" gui-text="Width (px):">800</param>
+            <param name="height" type="int" min="100" max="5000" gui-text="Height (px):">600</param>
+            <label>Dimensions only used when 'Fit to content' is disabled</label>
+        </page>
+        
+        <page name="format" gui-text="Format">
+            <param name="output_format" type="optiongroup" appearance="combo" gui-text="Output format:">
+                <option value="svg">SVG (Vector - via PDF)</option>
+                <option value="png">PNG (Raster - via PDF)</option>
+            </param>
+            <label>Mermaid → PDF → Inkscape → SVG/PNG</label>
+            <spacer/>
+            
+            <param name="scale_factor" type="float" min="0.1" max="10.0" precision="2" gui-text="Scale factor:">1.0</param>
+            <label>Scale the diagram during Mermaid generation</label>
+            <spacer/>
+            
+            <param name="quality" type="int" min="1" max="4" gui-text="PNG Quality (DPI multiplier):">2</param>
+            <label>1=72dpi, 2=144dpi, 3=216dpi, 4=288dpi (PNG only)</label>
+            <spacer/>
+            
+            <param name="embed_image" type="bool" gui-text="Embed PNG in document">true</param>
+            <label>If unchecked, links to external PNG file</label>
+        </page>
+        
+        <page name="placement" gui-text="Placement">
+            <param name="position_mode" type="optiongroup" appearance="combo" gui-text="Position:">
+                <option value="center">Center of canvas</option>
+                <option value="cursor">At cursor/selected object</option>
+                <option value="top_left">Top left</option>
+                <option value="top_center">Top center</option>
+                <option value="top_right">Top right</option>
+                <option value="bottom_left">Bottom left</option>
+                <option value="bottom_center">Bottom center</option>
+                <option value="bottom_right">Bottom right</option>
+            </param>
+        </page>
+        
+        <page name="config" gui-text="Configuration">
+            <param name="mermaid_cli_path" type="string" gui-text="Mermaid CLI path:">mmdc</param>
+            <label>Path to mmdc command (default: mmdc)</label>
+            <label>Windows: C:\Users\...\AppData\Roaming\npm\mmdc.cmd</label>
+            <label>Linux/Mac: mmdc or /usr/local/bin/mmdc</label>
+            <spacer/>
+            
+            <param name="inkscape_path" type="string" gui-text="Inkscape executable:">inkscape</param>
+            <label>Path to Inkscape (usually just 'inkscape')</label>
+            <label>Windows: C:\Program Files\Inkscape\bin\inkscape.exe</label>
+            <spacer/>
+            
+            <param name="pdf_poppler" type="bool" gui-text="Use Poppler for PDF import">true</param>
+            <label>Better text preservation (HIGHLY RECOMMENDED)</label>
+            <spacer/>
+            
+            <param name="use_puppeteer" type="bool" gui-text="Use Puppeteer rendering">true</param>
+            <label>Better quality but slower (requires Chromium)</label>
+            <spacer/>
+            
+            <param name="config_file" type="string" gui-text="Config file path (optional):"></param>
+            <label>Custom Mermaid configuration JSON file</label>
+            <spacer/>
+            
+            <param name="css_file" type="string" gui-text="Custom CSS file (optional):"></param>
+            <label>Custom CSS styling file</label>
+        </page>
+        
+        <page name="advanced" gui-text="Advanced">
+            <param name="timeout" type="int" min="5" max="300" gui-text="Timeout (seconds):">30</param>
+            <label>Maximum time to wait for diagram generation</label>
+            <spacer/>
+            
+            <param name="viewport_width" type="int" min="100" max="10000" gui-text="Viewport width:">1920</param>
+            <param name="viewport_height" type="int" min="100" max="10000" gui-text="Viewport height:">1080</param>
+            <label>Browser viewport size for rendering</label>
+            <spacer/>
+            
+            <param name="keep_temp_files" type="bool" gui-text="Keep temporary files for debugging">false</param>
+            <param name="temp_dir" type="string" gui-text="Temp directory:"></param>
+            <label>Leave empty for system default temp directory</label>
+            <spacer/>
+            
+            <param name="quiet_mode" type="bool" gui-text="Quiet mode (less console output)">true</param>
+        </page>
+        
+        <page name="help" gui-text="Help">
+            <label>How to use:</label>
+            <label>1. Install Node.js from nodejs.org</label>
+            <label>2. Install Mermaid CLI:</label>
+            <label>   npm install -g @mermaid-js/mermaid-cli</label>
+            <label>3. Enter your Mermaid diagram code</label>
+            <label>4. Click Apply to generate diagram</label>
+            <spacer/>
+            <label>Workflow:</label>
+            <label>1. Mermaid CLI generates PDF (best quality)</label>
+            <label>2. Inkscape converts PDF to SVG or PNG</label>
+            <label>3. Result is imported into document</label>
+            <spacer/>
+            <label>Why PDF intermediate format?</label>
+            <label>- Preserves text as actual text (editable)</label>
+            <label>- Better font rendering</label>
+            <label>- No color conversion issues</label>
+            <label>- Poppler ensures proper text extraction</label>
+            <spacer/>
+            <label>Troubleshooting:</label>
+            <label>- MUST enable 'Use Poppler' for text preservation</label>
+            <label>- Enable 'Fit to content' to remove whitespace</label>
+            <label>- Use SVG for editable vector graphics</label>
+            <label>- Use PNG for embedded raster images</label>
+            <spacer/>
+            <label>Documentation: https://mermaid.js.org/intro/</label>
+        </page>
+    </param>
+    
+    <effect>
+        <object-type>all</object-type>
+        <effects-menu>
+            <submenu name="Render"/>
+        </effects-menu>
+    </effect>
+    
+    <script>
+        <command location="inx" interpreter="python">mermaid_diagram.py</command>
+    </script>
+</inkscape-extension>
