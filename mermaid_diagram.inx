@@ -52,7 +52,7 @@
             <label>Mermaid → PDF → Inkscape → SVG/PNG</label>
             <spacer/>
             
-            <param name="scale_factor" type="float" min="0.1" max="10.0" precision="2" gui-text="Scale factor:">1.0</param>
+            <param name="scale_factor" type="float" min="0.1" max="10.0" precision="2" gui-text="Initial scale factor:">1.0</param>
             <label>Scale the diagram during Mermaid generation</label>
             <spacer/>
             
@@ -64,17 +64,71 @@
             <label>If unchecked, links to external PNG file</label>
         </page>
         
+        <page name="size" gui-text="Size &amp; Scale">
+            <label appearance="header">Auto-Scaling Options</label>
+            <param name="auto_scale" type="bool" gui-text="Enable auto-scale to fit">false</param>
+            <label>Automatically scale diagram to fit within max dimensions</label>
+            <spacer/>
+            
+            <param name="max_width" type="int" min="0" max="10000" gui-text="Maximum width (px):">0</param>
+            <param name="max_height" type="int" min="0" max="10000" gui-text="Maximum height (px):">0</param>
+            <label>Set to 0 for no limit. Only used when auto-scale is enabled.</label>
+            <spacer/>
+            
+            <param name="maintain_aspect_ratio" type="bool" gui-text="Maintain aspect ratio">true</param>
+            <label>Keep proportions when scaling</label>
+            <spacer/>
+            
+            <param name="lock_scale" type="bool" gui-text="Lock diagram after insertion">false</param>
+            <label>Prevent accidental resizing/moving</label>
+        </page>
+        
         <page name="placement" gui-text="Placement">
+            <label appearance="header">Position Mode</label>
             <param name="position_mode" type="optiongroup" appearance="combo" gui-text="Position:">
-                <option value="center">Center of canvas</option>
-                <option value="cursor">At cursor/selected object</option>
-                <option value="top_left">Top left</option>
-                <option value="top_center">Top center</option>
-                <option value="top_right">Top right</option>
-                <option value="bottom_left">Bottom left</option>
-                <option value="bottom_center">Bottom center</option>
-                <option value="bottom_right">Bottom right</option>
+                <option value="center">Center</option>
+                <option value="cursor">Cursor/View Center</option>
+                <option value="top_left">Top Left</option>
+                <option value="top_center">Top Center</option>
+                <option value="top_right">Top Right</option>
+                <option value="middle_left">Middle Left</option>
+                <option value="middle_right">Middle Right</option>
+                <option value="bottom_left">Bottom Left</option>
+                <option value="bottom_center">Bottom Center</option>
+                <option value="bottom_right">Bottom Right</option>
             </param>
+            <spacer/>
+            
+            <label appearance="header">Position Reference</label>
+            <param name="align_to_page" type="bool" gui-text="Align to page">true</param>
+            <label>If unchecked, aligns to viewport instead</label>
+            <spacer/>
+            
+            <param name="use_selection_bbox" type="bool" gui-text="Position relative to selection">false</param>
+            <label>Position based on selected object's bounding box</label>
+            <spacer/>
+            
+            <label appearance="header">Fine Tuning</label>
+            <param name="offset_x" type="float" min="-10000" max="10000" precision="2" gui-text="X offset (px):">0.0</param>
+            <param name="offset_y" type="float" min="-10000" max="10000" precision="2" gui-text="Y offset (px):">0.0</param>
+            <label>Manual position adjustment</label>
+        </page>
+        
+        <page name="layers" gui-text="Organization">
+            <label appearance="header">Layer Management</label>
+            <param name="create_layer" type="bool" gui-text="Create/use dedicated layer">false</param>
+            <param name="layer_name" type="string" gui-text="Layer name:">Mermaid Diagrams</param>
+            <label>Organize diagrams in a separate layer</label>
+            <spacer/>
+            
+            <label appearance="header">Object Properties</label>
+            <param name="object_id" type="string" gui-text="Custom object ID:"></param>
+            <label>Leave empty for auto-generated ID</label>
+            <spacer/>
+            
+            <param name="add_title" type="bool" gui-text="Add title element">false</param>
+            <param name="add_desc" type="bool" gui-text="Add description element">false</param>
+            <label>Improve SVG accessibility and organization</label>
         </page>
         
         <page name="config" gui-text="Configuration">
@@ -124,31 +178,46 @@
         </page>
         
         <page name="help" gui-text="Help">
-            <label>How to use:</label>
+            <label appearance="header">Installation</label>
             <label>1. Install Node.js from nodejs.org</label>
             <label>2. Install Mermaid CLI:</label>
             <label>   npm install -g @mermaid-js/mermaid-cli</label>
             <label>3. Enter your Mermaid diagram code</label>
             <label>4. Click Apply to generate diagram</label>
             <spacer/>
-            <label>Workflow:</label>
+            
+            <label appearance="header">Workflow</label>
             <label>1. Mermaid CLI generates PDF (best quality)</label>
             <label>2. Inkscape converts PDF to SVG or PNG</label>
             <label>3. Result is imported into document</label>
             <spacer/>
-            <label>Why PDF intermediate format?</label>
+            
+            <label appearance="header">Why PDF intermediate format?</label>
             <label>- Preserves text as actual text (editable)</label>
             <label>- Better font rendering</label>
             <label>- No color conversion issues</label>
             <label>- Poppler ensures proper text extraction</label>
             <spacer/>
-            <label>Troubleshooting:</label>
+            
+            <label appearance="header">New Features</label>
+            <label>• Auto-scale: Automatically fit diagrams to max size</label>
+            <label>• Layer organization: Group diagrams in layers</label>
+            <label>• Enhanced positioning: 10 position modes + offsets</label>
+            <label>• Selection-relative placement</label>
+            <label>• Lock diagrams to prevent accidental edits</label>
+            <label>• Custom IDs and metadata</label>
+            <spacer/>
+            
+            <label appearance="header">Troubleshooting</label>
             <label>- MUST enable 'Use Poppler' for text preservation</label>
             <label>- Enable 'Fit to content' to remove whitespace</label>
             <label>- Use SVG for editable vector graphics</label>
             <label>- Use PNG for embedded raster images</label>
+            <label>- Enable auto-scale to fit large diagrams</label>
             <spacer/>
+            
             <label>Documentation: https://mermaid.js.org/intro/</label>
+            <label>Extension by: YouvenZ</label>
         </page>
     </param>
     

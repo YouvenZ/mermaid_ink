@@ -7,6 +7,7 @@ import os
 import subprocess
 import tempfile
 import shutil
+import re
 
 class MermaidGenerator(inkex.EffectExtension):
     """Extension to generate Mermaid diagrams."""
@@ -31,8 +32,19 @@ class MermaidGenerator(inkex.EffectExtension):
         pars.add_argument("--quality", type=int, default=2, help="Quality level")
         pars.add_argument("--embed_image", type=inkex.Boolean, default=True, help="Embed image")
         
-        # Placement parameters
+        # Enhanced positioning parameters
         pars.add_argument("--position_mode", type=str, default="center", help="Position mode")
+        pars.add_argument("--offset_x", type=float, default=0.0, help="X offset")
+        pars.add_argument("--offset_y", type=float, default=0.0, help="Y offset")
+        pars.add_argument("--use_selection_bbox", type=inkex.Boolean, default=False, help="Position relative to selection")
+        pars.add_argument("--align_to_page", type=inkex.Boolean, default=True, help="Align to page or viewport")
+        
+        # Enhanced scaling parameters
+        pars.add_argument("--auto_scale", type=inkex.Boolean, default=False, help="Auto-scale to fit")
+        pars.add_argument("--max_width", type=int, default=0, help="Maximum width (0=no limit)")
+        pars.add_argument("--max_height", type=int, default=0, help="Maximum height (0=no limit)")
+        pars.add_argument("--maintain_aspect_ratio", type=inkex.Boolean, default=True, help="Maintain aspect ratio")
+        pars.add_argument("--lock_scale", type=inkex.Boolean, default=False, help="Lock object after insertion")
         
         # Config parameters
         pars.add_argument("--mermaid_cli_path", type=str, default="mmdc", help="Mermaid CLI path")
@@ -52,6 +64,15 @@ class MermaidGenerator(inkex.EffectExtension):
         pars.add_argument("--inkscape_path", type=str, default="inkscape", help="Inkscape executable path")
         pars.add_argument("--pdf_poppler", type=inkex.Boolean, default=True, help="Use PDF poppler for import")
         pars.add_argument("--fit_to_content", type=inkex.Boolean, default=True, help="Fit to content (no empty space)")
+        
+        # New: Layer management
+        pars.add_argument("--create_layer", type=inkex.Boolean, default=False, help="Create new layer for diagram")
+        pars.add_argument("--layer_name", type=str, default="Mermaid Diagrams", help="Layer name")
+        
+        # New: Object properties
+        pars.add_argument("--object_id", type=str, default="", help="Custom object ID")
+        pars.add_argument("--add_title", type=inkex.Boolean, default=False, help="Add title element")
+        pars.add_argument("--add_desc", type=inkex.Boolean, default=False, help="Add description element")
     
     def effect(self):
         """Main effect function."""
@@ -87,6 +108,9 @@ class MermaidGenerator(inkex.EffectExtension):
             if not pdf_file or not os.path.exists(pdf_file):
                 inkex.errormsg("Failed to generate PDF diagram")
                 return
+            
+            # Store mermaid code for later use
+            self.diagram_code = mermaid_code
             
             # Convert PDF using Inkscape based on output format
             if self.options.output_format == "svg":
@@ -200,6 +224,72 @@ class MermaidGenerator(inkex.EffectExtension):
             inkex.errormsg(f"Error running Mermaid CLI: {str(e)}")
             return None
     
+    def get_layer(self):
+        """Get or create layer for diagram."""
+        if not self.options.create_layer:
+            return self.svg.get_current_layer()
+        
+        # Look for existing layer
+        for layer in self.svg.xpath('//svg:g[@inkscape:groupmode="layer"]'):
+            if layer.get(inkex.addNS('label', 'inkscape')) == self.options.layer_name:
+                return layer
+        
+        # Create new layer
+        layer = inkex.Layer()
+        layer.set(inkex.addNS('label', 'inkscape'), self.options.layer_name)
+        self.svg.append(layer)
+        return layer
+    
+    def get_actual_dimensions(self, svg_file):
+        """Extract actual dimensions from converted SVG."""
+        try:
+            from lxml import etree
+            with open(svg_file, 'r', encoding='utf-8') as f:
+                svg_content = f.read()
+            
+            svg_tree = etree.fromstring(svg_content.encode('utf-8'))
+            
+            # Try to get width and height attributes
+            width = svg_tree.get('width')
+            height = svg_tree.get('height')
+            
+            if width and height:
+                # Parse values (remove units)
+                width_val = float(re.sub(r'[^\d.]', '', width))
+                height_val = float(re.sub(r'[^\d.]', '', height))
+                return width_val, height_val
+            
+            # Try viewBox
+            viewbox = svg_tree.get('viewBox')
+            if viewbox:
+                parts = viewbox.split()
+                if len(parts) == 4:
+                    return float(parts[2]), float(parts[3])
+            
+        except:
+            pass
+        
+        return None, None
+    
+    def apply_auto_scale(self, width, height):
+        """Calculate scale factor to fit within max dimensions."""
+        if not self.options.auto_scale:
+            return 1.0
+        
+        max_w = self.options.max_width if self.options.max_width > 0 else float('inf')
+        max_h = self.options.max_height if self.options.max_height > 0 else float('inf')
+        
+        if width <= max_w and height <= max_h:
+            return 1.0
+        
+        if self.options.maintain_aspect_ratio:
+            scale_w = max_w / width if width > max_w else 1.0
+            scale_h = max_h / height if height > max_h else 1.0
+            return min(scale_w, scale_h)
+        else:
+            # Non-proportional scaling (rarely used)
+            return 1.0
+    
     def import_pdf_as_svg(self, pdf_file):
         """Import PDF as SVG using Inkscape CLI to convert."""
         try:
@@ -242,6 +332,16 @@ class MermaidGenerator(inkex.EffectExtension):
                 inkex.errormsg("Inkscape conversion failed: SVG file not created")
                 return
             
+            # Get actual dimensions
+            actual_width, actual_height = self.get_actual_dimensions(svg_file)
+            if actual_width is None:
+                actual_width = self.options.width
+                actual_height = self.options.height
+            
+            # Calculate auto-scale if needed
+            auto_scale = self.apply_auto_scale(actual_width, actual_height)
+            final_scale = self.options.scale_factor * auto_scale
+            
             # Read the converted SVG
             with open(svg_file, 'r', encoding='utf-8') as f:
                 svg_content = f.read()
@@ -251,12 +351,35 @@ class MermaidGenerator(inkex.EffectExtension):
             svg_tree = etree.fromstring(svg_content.encode('utf-8'))
             
             # Get position
-            x, y = self.calculate_position()
+            x, y = self.calculate_position(actual_width * final_scale, actual_height * final_scale)
             
             # Create a group to hold the imported SVG
             group = inkex.Group()
+            
+            # Set ID if provided
+            if self.options.object_id:
+                group.set('id', self.options.object_id)
+            else:
+                group.set('id', self.svg.get_unique_id('mermaid-diagram-'))
+            
             group.label = "Mermaid Diagram"
-            group.set('transform', f'translate({x},{y})')
+            
+            # Apply transform with scale and position
+            if final_scale != 1.0:
+                group.set('transform', f'translate({x},{y}) scale({final_scale})')
+            else:
+                group.set('transform', f'translate({x},{y})')
+            
+            # Add metadata
+            if self.options.add_title:
+                title = inkex.Title()
+                title.text = "Mermaid Diagram"
+                group.append(title)
+            
+            if self.options.add_desc:
+                desc = inkex.Desc()
+                desc.text = self.diagram_code[:200] + "..." if len(self.diagram_code) > 200 else self.diagram_code
+                group.append(desc)
             
             # Add all elements from the imported SVG to the group
             for element in svg_tree:
@@ -266,8 +389,13 @@ class MermaidGenerator(inkex.EffectExtension):
             if 'viewBox' in svg_tree.attrib:
                 group.set('viewBox', svg_tree.attrib['viewBox'])
             
-            # Add to document
-            self.svg.append(group)
+            # Lock if requested
+            if self.options.lock_scale:
+                group.set(inkex.addNS('insensitive', 'sodipodi'), 'true')
+            
+            # Add to appropriate layer
+            layer = self.get_layer()
+            layer.append(group)
             
             # Clean up temp SVG
             if not self.options.keep_temp_files:
@@ -288,8 +416,9 @@ class MermaidGenerator(inkex.EffectExtension):
             temp_dir = os.path.dirname(pdf_file)
             png_file = os.path.join(temp_dir, "diagram_converted.png")
             
-            # Adjust DPI based on quality setting
-            dpi = 72 * self.options.quality  # quality 1=72dpi, 2=144dpi, 3=216dpi, 4=288dpi
+            # Adjust DPI based on quality setting and scale
+            base_dpi = 72 * self.options.quality  # quality 1=72dpi, 2=144dpi, 3=216dpi, 4=288dpi
+            actual_dpi = base_dpi * self.options.scale_factor
             
             # Build Inkscape command to convert PDF to PNG
             cmd = [
@@ -297,7 +426,7 @@ class MermaidGenerator(inkex.EffectExtension):
                 pdf_file, 
                 '--export-type=png',
                 '--export-filename=' + png_file,
-                f'--export-dpi={dpi}'
+                f'--export-dpi={actual_dpi}'
             ]
             
             # Add poppler option for better text rendering
@@ -359,8 +488,21 @@ class MermaidGenerator(inkex.EffectExtension):
                 # If PIL not available, use specified dimensions
                 pass
             
+            # Calculate auto-scale if needed (for PNG, already scaled by DPI)
+            auto_scale = self.apply_auto_scale(img_width, img_height)
+            
+            # Apply auto-scale to dimensions
+            final_width = img_width * auto_scale
+            final_height = img_height * auto_scale
+            
             # Create image element
             image = Image()
+            
+            # Set ID if provided
+            if self.options.object_id:
+                image.set('id', self.options.object_id)
+            else:
+                image.set('id', self.svg.get_unique_id('mermaid-diagram-'))
             
             # Embed or link image based on option
             if self.options.embed_image:
@@ -377,17 +519,22 @@ class MermaidGenerator(inkex.EffectExtension):
                 image.set('{http://www.w3.org/1999/xlink}href', abs_path)
             
             # Set position
-            x, y = self.calculate_position()
+            x, y = self.calculate_position(final_width, final_height)
             image.set('x', str(x))
             image.set('y', str(y))
             
-            # Use actual image dimensions
-            image.set('width', str(img_width))
-            image.set('height', str(img_height))
+            # Use calculated dimensions
+            image.set('width', str(final_width))
+            image.set('height', str(final_height))
             image.set('preserveAspectRatio', 'xMidYMid meet')
             
-            # Add to document
-            self.svg.append(image)
+            # Lock if requested
+            if self.options.lock_scale:
+                image.set(inkex.addNS('insensitive', 'sodipodi'), 'true')
+            
+            # Add to appropriate layer
+            layer = self.get_layer()
+            layer.append(image)
             
             # Clean up temp PNG only if embedded
             if self.options.embed_image and not self.options.keep_temp_files:
@@ -401,41 +548,70 @@ class MermaidGenerator(inkex.EffectExtension):
             import traceback
             inkex.errormsg(traceback.format_exc())
     
-    def calculate_position(self):
-        """Calculate insertion position."""
-        # Get canvas dimensions
-        width = self.svg.viewport_width - 1000
-        height = self.svg.viewport_height - 1000
+    def get_reference_bounds(self):
+        """Get bounds for positioning reference (page or selection)."""
+        if self.options.use_selection_bbox and self.svg.selection:
+            # Use selection bounding box
+            bbox = self.svg.selection.bounding_box()
+            if bbox:
+                return bbox.left, bbox.top, bbox.width, bbox.height
         
-        # For fit_to_content, we don't know exact dimensions yet
-        # Use canvas center as default
-        diagram_width = 0
-        diagram_height = 0
+        # Use page/viewport bounds
+        if self.options.align_to_page:
+            # Use page dimensions
+            page_width = self.svg.unittouu(self.svg.get('width'))
+            page_height = self.svg.unittouu(self.svg.get('height'))
+            return 0, 0, page_width, page_height
+        else:
+            # Use viewport
+            vp_width = self.svg.viewport_width
+            vp_height = self.svg.viewport_height
+            return 0, 0, vp_width, vp_height
+    
+    def calculate_position(self, diagram_width=0, diagram_height=0):
+        """Calculate insertion position with enhanced options."""
+        # Get reference bounds
+        ref_x, ref_y, ref_width, ref_height = self.get_reference_bounds()
         
+        # Calculate base position
         if self.options.position_mode == "center":
-            x = (width - diagram_width) / 2
-            y = (height - diagram_height) / 2
+            x = ref_x + (ref_width - diagram_width) / 2
+            y = ref_y + (ref_height - diagram_height) / 2
         elif self.options.position_mode == "top_left":
-            x = 0
-            y = 0
+            x = ref_x
+            y = ref_y
         elif self.options.position_mode == "top_center":
-            x = width / 2
-            y = 0
+            x = ref_x + (ref_width - diagram_width) / 2
+            y = ref_y
         elif self.options.position_mode == "top_right":
-            x = width - diagram_width
-            y = 0
+            x = ref_x + ref_width - diagram_width
+            y = ref_y
+        elif self.options.position_mode == "middle_left":
+            x = ref_x
+            y = ref_y + (ref_height - diagram_height) / 2
+        elif self.options.position_mode == "middle_right":
+            x = ref_x + ref_width - diagram_width
+            y = ref_y + (ref_height - diagram_height) / 2
         elif self.options.position_mode == "bottom_left":
-            x = 0
-            y = height - diagram_height
+            x = ref_x
+            y = ref_y + ref_height - diagram_height
         elif self.options.position_mode == "bottom_center":
-            x = width / 2
-            y = height - diagram_height
+            x = ref_x + (ref_width - diagram_width) / 2
+            y = ref_y + ref_height - diagram_height
         elif self.options.position_mode == "bottom_right":
-            x = width - diagram_width
-            y = height - diagram_height
-        else:  # cursor or default
-            x = width / 2
-            y = height / 2
+            x = ref_x + ref_width - diagram_width
+            y = ref_y + ref_height - diagram_height
+        elif self.options.position_mode == "cursor":
+            # Try to get cursor position from view center
+            x = ref_x + ref_width / 2
+            y = ref_y + ref_height / 2
+        else:  # default to center
+            x = ref_x + (ref_width - diagram_width) / 2
+            y = ref_y + (ref_height - diagram_height) / 2
+        
+        # Apply offsets
+        x += self.options.offset_x
+        y += self.options.offset_y
         
         return x, y
 
