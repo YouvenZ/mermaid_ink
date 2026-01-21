@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+# MIT License
+
+# Copyright (c) 2026 Rachid, Youven ZEGHLACHE
+#!/usr/bin/env python3
+
 """
 Inkscape extension to generate and insert Mermaid diagrams.
 """
