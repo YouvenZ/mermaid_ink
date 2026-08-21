@@ -252,8 +252,37 @@ class MermaidGenerator(inkex.EffectExtension):
     def generate_diagram_pdf(self, mermaid_code):
         """Generate diagram as PDF using Mermaid CLI."""
         # Create temp directory
-        if self.options.temp_dir and os.path.exists(self.options.temp_dir):
+        if self.options.temp_dir:
             temp_dir = self.options.temp_dir
+
+            # In debug mode, ensure the user-provided temp directory exists.
+            if self.options.keep_temp_files:
+                if not os.path.exists(temp_dir):
+                    try:
+                        os.makedirs(temp_dir, exist_ok=True)
+                        inkex.errormsg(
+                            f"Debug folder created: {temp_dir}\n"
+                            "The folder did not exist and was created automatically.\n"
+                        )
+                    except Exception as e:
+                        try:
+                            temp_dir = tempfile.mkdtemp()
+                            inkex.errormsg(
+                                f"Failed to create debug folder: {temp_dir}\n"
+                                f"Reason: {e!s}\n"
+                                f"Using temporary folder instead: {temp_dir}\n"
+                            )
+                        except Exception as e2:
+                            inkex.errormsg(
+                                f"Failed to create debug folder: {temp_dir}\n"
+                                f"Reason: {e!s}\n"
+                                f"Failed to create temporary folder: {e2!s}\n"
+                                "Cannot proceed.\n"
+                            )
+                            return None
+                else:
+                    inkex.errormsg(f"Using debug folder: {temp_dir}\n")
+
         else:
             temp_dir = tempfile.mkdtemp()
 
