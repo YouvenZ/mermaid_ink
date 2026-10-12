@@ -82,18 +82,35 @@ Transform text descriptions into professional flowcharts, sequence diagrams, cla
 | Diagram Type | Syntax Keyword | Description |
 |--------------|----------------|-------------|
 | **Flowchart** | `flowchart` or `graph` | Process flows and decision trees |
-| **Sequence** | `sequenceDiagram` | Interaction between entities |
-| **Class** | `classDiagram` | UML class relationships |
-| **State** | `stateDiagram-v2` | State machine diagrams |
-| **ER Diagram** | `erDiagram` | Entity-relationship models |
-| **Gantt** | `gantt` | Project timelines |
-| **Pie Chart** | `pie` | Proportional data |
-| **Git Graph** | `gitGraph` | Git branch visualization |
-| **Mindmap** | `mindmap` | Hierarchical ideas |
-| **Timeline** | `timeline` | Chronological events |
+| **Swimlanes Diagram** | `swimlane-beta` | Swimlane-style process layouts |
+| **Sequence Diagram** | `sequenceDiagram` | Interaction between entities |
+| **Class Diagram** | `classDiagram` | UML class relationships |
+| **State Diagram** | `stateDiagram-v2` | State machine diagrams |
+| **Entity Relationship Diagram** | `erDiagram` | Entity-relationship models |
 | **User Journey** | `journey` | User experience mapping |
-| **Quadrant** | `quadrantChart` | 2x2 matrix analysis |
-| **Sankey** | `sankey-beta` | Flow quantities |
+| **Gantt** | `gantt` | Project timelines |
+| **Pie Chart** | `pie` | Proportional data visualization |
+| **Quadrant Chart** | `quadrantChart` | 2x2 matrix analysis |
+| **Requirement Diagram** | `requirementDiagram` | Requirements and traceability |
+| **GitGraph (Git) Diagram** | `gitGraph` | Git branch and merge visualization |
+| **C4 Diagram** | `C4Context`, `C4Container`, `C4Component`, `C4Dynamic`, `C4Deployment` | C4 architecture views |
+| **Mindmaps** | `mindmap` | Hierarchical idea mapping |
+| **Timeline** | `timeline` | Chronological events |
+| **ZenUML** | `zenuml` | UML sequence-style modeling |
+| **Sankey** | `sankey` | Flow quantities (beta) |
+| **XY Chart** | `xychart` | X/Y data plotting (beta) |
+| **Block Diagram** | `block` | Block/system diagrams (beta) |
+| **Packet** | `packet` | Packet and protocol diagrams (beta) |
+| **Kanban** | `kanban` | Task flow boards |
+| **Architecture** | `architecture-beta` | Infrastructure and service architecture (beta) |
+| **Radar** | `radar-beta` | Radar/spider charts (beta) |
+| **Event Modeling** | `eventmodeling`  | Event-driven domain modeling |
+| **Treemap** | `treemap-beta` | Hierarchical area charts (beta) |
+| **Venn** | `venn-beta`  | Set overlap relationships |
+| **Ishikawa** | `ishikawa-beta`  | Cause-and-effect (fishbone) diagrams |
+| **Wardley** | `wardley-beta`  | Strategic mapping diagrams |
+| **Cynefin** | `cynefin-beta`  | Context-based decision framework diagrams |
+| **TreeView** | `treeView-beta` | Expandable tree structures |
 
 ---
 
